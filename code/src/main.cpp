@@ -5,6 +5,8 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
+#include <AccelStepper.h>
+
 WebServer server(80);
 
 // 200 steps per revolution
@@ -18,8 +20,12 @@ WebServer server(80);
 #define FLAP_COUNT 50
 
 // defines pins
-#define stepPin 13
-#define dirPin 12
+#define STEP_PIN 13
+#define DIR_PIN 12
+
+const int flapSteps = STEPS_PER_REVOLUTION / FLAP_COUNT;
+
+AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
 // 26 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 // 10 0123456789
@@ -32,6 +38,11 @@ WebServer server(80);
 
 // ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+{}|:<>?/.,;[]\\=-`~"
 // █
+
+// const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
+// "+-*!.#%@?,&': █"
+// "?!@&()+-%$█*= "
+// " █?!@%'+-=.,#:"
 
 // TODO: maybe reuse 0 and o and 1 and i
 // const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
@@ -47,28 +58,14 @@ const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# |";
 
 int characterIndex = 0;
 
-void step(int steps, int delayTime)
-{
-  for (int i = 0; i < steps; i++)
-  {
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(delayTime);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(delayTime);
-  }
-}
-
-void turnDeg(int degrees, int delayTime = 500)
-{
-  // don't do negative angles
-  const int steps = (STEPS_PER_REVOLUTION / 360) * degrees;
-  step(steps, delayTime);
-}
-
 void nextFlap(int delayTime = 500)
 {
-  const int steps = STEPS_PER_REVOLUTION / FLAP_COUNT;
-  step(steps, delayTime);
+  stepper.moveTo(stepper.currentPosition() + flapSteps);
+}
+
+int getFlapIndex()
+{
+  return stepper.currentPosition() / flapSteps % FLAP_COUNT;
 }
 
 int getCharacterIndex(char c)
@@ -84,24 +81,18 @@ int getCharacterIndex(char c)
 void setCharacter(char c)
 {
   int targetIndex = getCharacterIndex(c);
+  int currentIndex = getFlapIndex();
+  int currentPosition = stepper.currentPosition();
 
-  int steps = targetIndex - characterIndex;
+  int steps = targetIndex - currentIndex;
 
   if (steps < 0)
   {
     steps += FLAP_COUNT;
   }
-  // int steps = newCharacterIndex < characterIndex ? characters.length() - characterIndex + newCharacterIndex : newCharacterIndex - characterIndex;
 
-  Serial.printf("%d -> %d: %d\n", characterIndex, targetIndex, steps);
-  Serial.println(characters.length());
-
-  characterIndex = targetIndex;
-
-  step(steps * (STEPS_PER_REVOLUTION / FLAP_COUNT), 150);
-
-  // TODO: maybe add slight ramp up and ramp down
-  // step(steps * (STEPS_PER_REVOLUTION / FLAP_COUNT), 100);
+  Serial.printf("%d -> %d: %d\n", currentIndex, targetIndex, steps);
+  stepper.moveTo(currentPosition + steps * flapSteps);
 }
 
 void handleRoot()
@@ -136,8 +127,8 @@ void setup()
     ;
 
   // Sets the two pins as Outputs
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(STEP_PIN, OUTPUT);
+  pinMode(DIR_PIN, OUTPUT);
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Establishing connection to WiFi");
@@ -161,7 +152,13 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
+  // Set the maximum speed and acceleration
+  stepper.setMaxSpeed(STEPS_PER_REVOLUTION * 3); // Set the maximum speed in steps per second
+  stepper.setAcceleration(15000);                // Set the acceleration in steps per second squared
+
+  // Move the motor to the initial position
   // TODO: home sensor
+  // stepper.moveTo(1000); // Move to position 1000
 
   server.on("/", handleRoot);
   server.on("/character", handleCharacter);
@@ -170,41 +167,16 @@ void setup()
   server.begin();
   Serial.println("HTTP server started");
 
-  digitalWrite(dirPin, HIGH); // Enables the motor to move in a particular direction
+  digitalWrite(DIR_PIN, HIGH); // Enables the motor to move in a particular direction
 }
 
 void loop()
 {
   server.handleClient();
 
-  // turnDeg(90, 500);
-
-  // delay(1500);
-
-  // turnDeg(90, 300);
-
-  // delay(1500);
-
-  // turnDeg(180, 500);
-
-  // for (int i = 0; i < 12; i++)
-  // {
-  //   nextFlap(300);
-  //   delay(1000);
+  // if (current pos % flapSteps == 0) {
+  //   stepper.stop(); // reset to prevent overflow
   // }
 
-  // turnDeg(360 * 3, 300);
-
-  // delay(3000);
-
-  // digitalWrite(dirPin, LOW); // Changes the rotations direction
-  // // Makes 400 pulses for making two full cycle rotation
-  // for (int x = 0; x < 1600; x++)
-  // {
-  //   digitalWrite(stepPin, HIGH);
-  //   delayMicroseconds(500);
-  //   digitalWrite(stepPin, LOW);
-  //   delayMicroseconds(500);
-  // }
-  // delay(1000);
+  stepper.run();
 }
