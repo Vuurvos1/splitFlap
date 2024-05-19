@@ -21,6 +21,32 @@ WebServer server(80);
 #define stepPin 13
 #define dirPin 12
 
+// 26 ABCDEFGHIJKLMNOPQRSTUVWXYZ
+// 10 0123456789
+// 20 !@#$%^&*()_+{}|:<>?/.,;[]\\=-`~
+// 1 █ (full block)
+// 1 space
+
+// "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █
+// ",.?!=/-+:$%()"
+
+// ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+{}|:<>?/.,;[]\\=-`~"
+// █
+
+// TODO: maybe reuse 0 and o and 1 and i
+// const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
+const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# |";
+// | is full block
+// ?!@-=+&%$#.,:'
+
+// "+-*!.#%@?,&': █"
+// "?!@&()+-%$█*= "
+// " █?!@%'+-=.,#:"
+
+// +-:,.'%$@?!# █
+
+int characterIndex = 0;
+
 void step(int steps, int delayTime)
 {
   for (int i = 0; i < steps; i++)
@@ -45,6 +71,39 @@ void nextFlap(int delayTime = 500)
   step(steps, delayTime);
 }
 
+int getCharacterIndex(char c)
+{
+  int index = characters.indexOf(c);
+  if (index == -1)
+  {
+    return characters.indexOf(' ');
+  }
+  return index;
+}
+
+void setCharacter(char c)
+{
+  int targetIndex = getCharacterIndex(c);
+
+  int steps = targetIndex - characterIndex;
+
+  if (steps < 0)
+  {
+    steps += FLAP_COUNT;
+  }
+  // int steps = newCharacterIndex < characterIndex ? characters.length() - characterIndex + newCharacterIndex : newCharacterIndex - characterIndex;
+
+  Serial.printf("%d -> %d: %d\n", characterIndex, targetIndex, steps);
+  Serial.println(characters.length());
+
+  characterIndex = targetIndex;
+
+  step(steps * (STEPS_PER_REVOLUTION / FLAP_COUNT), 150);
+
+  // TODO: maybe add slight ramp up and ramp down
+  // step(steps * (STEPS_PER_REVOLUTION / FLAP_COUNT), 100);
+}
+
 void handleRoot()
 {
   server.send(200, "text/html", "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\"></head><body><h1>Hey there!</h1></body></html>");
@@ -53,6 +112,20 @@ void handleRoot()
 void handleNotFound()
 {
   server.send(404, "text/plain", "Not found");
+}
+
+void handleCharacter()
+{
+  if (server.hasArg("c"))
+  {
+    char c = server.arg("c")[0];
+    setCharacter(c);
+    server.send(200, "text/plain", "OK");
+  }
+  else
+  {
+    server.send(400, "text/plain", "Bad request");
+  }
 }
 
 void setup()
@@ -88,7 +161,10 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
+  // TODO: home sensor
+
   server.on("/", handleRoot);
+  server.on("/character", handleCharacter);
   server.onNotFound(handleNotFound);
 
   server.begin();
