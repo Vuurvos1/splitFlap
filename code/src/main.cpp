@@ -110,7 +110,7 @@ void handleCharacter()
   if (server.hasArg("c"))
   {
     char c = server.arg("c")[0];
-    setCharacter(c);
+    setCharacter(toupper(c));
     server.send(200, "text/plain", "OK");
   }
   else
