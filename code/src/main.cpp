@@ -5,95 +5,15 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
-#include <AccelStepper.h>
+#include <SplitFlap.h>
 
 WebServer server(80);
-
-// 200 steps per revolution
-// 1 revolution = 360 degrees
-// 1 step = 1.8 degrees
-
-// 1/16 microstepping
-// 1 revolution = 200 * 16 steps = 3200 steps
-#define STEPS_PER_REVOLUTION 3200
-
-#define FLAP_COUNT 50
 
 // defines pins
 #define STEP_PIN 13
 #define DIR_PIN 12
 
-const int flapSteps = STEPS_PER_REVOLUTION / FLAP_COUNT;
-
-AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
-
-// 26 ABCDEFGHIJKLMNOPQRSTUVWXYZ
-// 10 0123456789
-// 20 !@#$%^&*()_+{}|:<>?/.,;[]\\=-`~
-// 1 █ (full block)
-// 1 space
-
-// "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █
-// ",.?!=/-+:$%()"
-
-// ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+{}|:<>?/.,;[]\\=-`~"
-// █
-
-// const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
-// "+-*!.#%@?,&': █"
-// "?!@&()+-%$█*= "
-// " █?!@%'+-=.,#:"
-
-// TODO: maybe reuse 0 and o and 1 and i
-// const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
-const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# |";
-// | is full block
-// ?!@-=+&%$#.,:'
-
-// "+-*!.#%@?,&': █"
-// "?!@&()+-%$█*= "
-// " █?!@%'+-=.,#:"
-
-// +-:,.'%$@?!# █
-
-int characterIndex = 0;
-
-void nextFlap(int delayTime = 500)
-{
-  stepper.moveTo(stepper.currentPosition() + flapSteps);
-}
-
-int getFlapIndex()
-{
-  return stepper.currentPosition() / flapSteps % FLAP_COUNT;
-}
-
-int getCharacterIndex(char c)
-{
-  int index = characters.indexOf(c);
-  if (index == -1)
-  {
-    return characters.indexOf(' ');
-  }
-  return index;
-}
-
-void setCharacter(char c)
-{
-  int targetIndex = getCharacterIndex(c);
-  int currentIndex = getFlapIndex();
-  int currentPosition = stepper.currentPosition();
-
-  int steps = targetIndex - currentIndex;
-
-  if (steps < 0)
-  {
-    steps += FLAP_COUNT;
-  }
-
-  Serial.printf("%d -> %d: %d\n", currentIndex, targetIndex, steps);
-  stepper.moveTo(currentPosition + steps * flapSteps);
-}
+SplitFlap splitFlap(STEP_PIN, DIR_PIN);
 
 void handleRoot()
 {
@@ -110,13 +30,25 @@ void handleCharacter()
   if (server.hasArg("c"))
   {
     char c = server.arg("c")[0];
-    setCharacter(toupper(c));
+    splitFlap.setCharacter(c);
     server.send(200, "text/plain", "OK");
+    return;
   }
-  else
+
+  server.send(400, "text/plain", "Bad request");
+}
+
+void handleFlaps()
+{
+  if (server.hasArg("f"))
   {
-    server.send(400, "text/plain", "Bad request");
+    int f = server.arg("f").toInt();
+    splitFlap.setFlap(f);
+    server.send(200, "text/plain", "OK");
+    return;
   }
+
+  server.send(400, "text/plain", "Bad request");
 }
 
 void setup()
@@ -126,9 +58,7 @@ void setup()
   while (!Serial)
     ;
 
-  // Sets the two pins as Outputs
-  pinMode(STEP_PIN, OUTPUT);
-  pinMode(DIR_PIN, OUTPUT);
+  splitFlap.init();
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Establishing connection to WiFi");
@@ -152,31 +82,18 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
-  // Set the maximum speed and acceleration
-  stepper.setMaxSpeed(STEPS_PER_REVOLUTION * 3); // Set the maximum speed in steps per second
-  stepper.setAcceleration(15000);                // Set the acceleration in steps per second squared
-
-  // Move the motor to the initial position
-  // TODO: home sensor
-  // stepper.moveTo(1000); // Move to position 1000
-
   server.on("/", handleRoot);
   server.on("/character", handleCharacter);
+  server.on("/flaps", handleFlaps);
   server.onNotFound(handleNotFound);
 
   server.begin();
   Serial.println("HTTP server started");
-
-  digitalWrite(DIR_PIN, HIGH); // Enables the motor to move in a particular direction
 }
 
 void loop()
 {
   server.handleClient();
 
-  // if (current pos % flapSteps == 0) {
-  //   stepper.stop(); // reset to prevent overflow
-  // }
-
-  stepper.run();
+  splitFlap.update();
 }
