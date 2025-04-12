@@ -1,0 +1,25 @@
+name: Test Shared
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'code/shared/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'code/shared/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install PlatformIO
+        uses: platformio/platformio-core-action@v1
+
+      - name: Run Shared Tests
+        run: |
+          cd code
+          pio test -e shared_test
