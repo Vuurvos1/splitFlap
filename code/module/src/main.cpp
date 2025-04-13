@@ -38,5 +38,8 @@ void loop()
       Serial.print(" ");
     }
     Serial.println();
+
+    // forward the data
+    mySerial.write(serialBuffer, bytesRead);
   }
 }

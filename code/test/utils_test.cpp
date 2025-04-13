@@ -36,11 +36,11 @@ void test_createPacket_function(void)
     TEST_ASSERT_EQUAL(data[i], packet[i + 1]);
   }
 
-  // Check END_BYTE
-  TEST_ASSERT_EQUAL(END_BYTE, packet[length + 1]);
-
   // Check CRC (0x01 ^ 0x02 ^ 0x03 ^ 0x04 ^ 0x05 = 0x01)
-  TEST_ASSERT_EQUAL(0x01, packet[length + 2]);
+  TEST_ASSERT_EQUAL(0x01, packet[length + 1]);
+
+  // Check END_BYTE
+  TEST_ASSERT_EQUAL(END_BYTE, packet[length + 2]);
 }
 
 int main(int argc, char **argv)

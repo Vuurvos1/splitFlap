@@ -24,7 +24,7 @@ std::vector<uint8_t> createPacket(const std::vector<uint8_t> &data)
   std::vector<uint8_t> packet(data.size() + 3);
   packet[0] = START_BYTE;
   std::copy(data.begin(), data.end(), packet.begin() + 1);
-  packet[data.size() + 1] = END_BYTE;
-  packet[data.size() + 2] = calculateCRC(const_cast<uint8_t *>(data.data()), data.size());
+  packet[data.size() + 1] = calculateCRC(const_cast<uint8_t *>(data.data()), data.size());
+  packet[data.size() + 2] = END_BYTE;
   return packet;
 }
