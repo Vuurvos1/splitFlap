@@ -1,11 +1,19 @@
 #include <Arduino.h>
 #include <config.h>
+#include <HardwareSerial.h>
 
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
 #include <SplitFlap.h>
+#include <utils.h>
+
+#define TXD1 19
+#define RXD1 21
+
+// Use Serial1 for UART communication
+HardwareSerial mySerial(1);
 
 WebServer server(80);
 
@@ -54,6 +62,9 @@ void handleFlaps()
 void setup()
 {
   Serial.begin(115200);
+  mySerial.begin(9600, SERIAL_8N1, RXD1, TXD1); // UART setup
+
+  Serial.println("ESP32 UART Transmitter");
 
   while (!Serial)
     ;
@@ -96,4 +107,31 @@ void loop()
   server.handleClient();
 
   splitFlap.update();
+
+  // send a message over serial every 2 seconds
+  static unsigned long lastSend = 0;
+  if (millis() - lastSend > 2000)
+  {
+    std::vector<uint8_t> data = {
+        static_cast<uint8_t>(random(65)),
+        static_cast<uint8_t>(random(65)),
+        static_cast<uint8_t>(random(65)),
+        static_cast<uint8_t>(random(65)),
+        static_cast<uint8_t>(random(65))};
+
+    std::vector<uint8_t> packet = createPacket(data);
+
+    // print the packet
+    Serial.print("Packet: ");
+    for (uint8_t byte : packet)
+    {
+      Serial.print(byte);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    mySerial.write(packet.data(), packet.size());
+
+    lastSend = millis();
+  }
 }

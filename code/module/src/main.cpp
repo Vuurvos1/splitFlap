@@ -1,28 +1,42 @@
 #include <Arduino.h>
 #include "utils.h"
 
-uint8_t calculateCRC(uint8_t *data, uint8_t length);
+#define TXD1 19
+#define RXD1 21
+
+// Use Serial1 for UART communication
+HardwareSerial mySerial(2);
+
+// Buffer for serial data
+const int BUFFER_SIZE = 64;
+uint8_t serialBuffer[BUFFER_SIZE];
 
 void setup()
 {
   Serial.begin(115200);
+  mySerial.begin(9600, SERIAL_8N1, RXD1, TXD1); // UART setup
 
-  // put your setup code here, to run once:
-  int result = add(2, 3);
-  Serial.println(result);
+  Serial.println("Module started");
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
-}
-
-uint8_t calculateCRC(uint8_t *data, uint8_t length)
-{
-  uint8_t crc = 0x00;
-  for (uint8_t i = 0; i < length; i++)
+  // Check if data is available to read
+  if (mySerial.available())
   {
-    crc ^= data[i];
+    int bytesRead = mySerial.readBytes(serialBuffer, BUFFER_SIZE);
+    Serial.print("Received ");
+    Serial.print(bytesRead);
+    Serial.println(" bytes");
+
+    // print as hex
+    Serial.print("Data: ");
+    for (int i = 0; i < bytesRead; i++)
+    {
+      Serial.print("0x");
+      Serial.print(serialBuffer[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
   }
-  return crc;
 }
