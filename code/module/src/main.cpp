@@ -8,8 +8,6 @@
 // Use Serial1 for UART communication
 HardwareSerial mySerial(2);
 
-// Buffer for serial data
-std::vector<uint8_t> serialBuffer;
 bool readingPacket = false;
 
 void handleMyByte(uint8_t byte)
@@ -31,21 +29,21 @@ void loop()
   // Check if data is available to read
   if (mySerial.available())
   {
-    uint8_t incomming = mySerial.read();
+    uint8_t incoming = mySerial.read();
 
-    if (!readingPacket && incomming != END_BYTE)
+    if (!readingPacket && incoming != END_BYTE)
     {
       readingPacket = true;
-      handleMyByte(incomming);
+      handleMyByte(incoming);
     }
     else
     {
       // forward the data
-      Serial.print(String(incomming) + " ");
-      mySerial.write(incomming);
+      Serial.print(String(incoming) + " ");
+      mySerial.write(incoming);
     }
 
-    if (incomming == END_BYTE)
+    if (incoming == END_BYTE)
     {
       Serial.println("End of packet");
       readingPacket = false;
