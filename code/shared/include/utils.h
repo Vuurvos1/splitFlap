@@ -28,3 +28,42 @@ std::vector<uint8_t> createPacket(const std::vector<uint8_t> &data)
   packet[data.size() + 2] = END_BYTE;
   return packet;
 }
+
+bool validatePacket(const std::vector<uint8_t> &packet)
+{
+  if (packet.size() < 3)
+  {
+    return false;
+  }
+
+  if (packet[0] != START_BYTE)
+  {
+    return false;
+  }
+
+  if (packet[packet.size() - 1] != END_BYTE)
+  {
+    return false;
+  }
+
+  // Extract data portion and verify CRC
+  std::vector<uint8_t> data(packet.begin() + 1, packet.end() - 2);
+  uint8_t receivedCRC = packet[packet.size() - 2];
+  uint8_t calculatedCRC = calculateCRC(const_cast<uint8_t *>(data.data()), data.size());
+
+  if (receivedCRC != calculatedCRC)
+  {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * remove first data byte and create a new packet with the remaining data
+ */
+std::vector<uint8_t> createForwardPacket(const std::vector<uint8_t> &packet)
+{
+  std::vector<uint8_t> data(packet.begin() + 2, packet.end() - 2); // skip START byte and first data byte, and skip CRC and END bytes
+  return createPacket(data);
+}

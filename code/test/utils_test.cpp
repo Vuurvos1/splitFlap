@@ -43,10 +43,41 @@ void test_createPacket_function(void)
   TEST_ASSERT_EQUAL(END_BYTE, packet[length + 2]);
 }
 
+void test_validatePacket_function(void)
+{
+  // valid packet
+  std::vector<uint8_t> packet = {0xAA, 0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x55};
+  TEST_ASSERT_TRUE(validatePacket(packet));
+
+  // invalid crc
+  std::vector<uint8_t> packet2 = {0xAA, 0x01, 0x02, 0x03, 0x04, 0x05, 0x02, 0x55};
+  TEST_ASSERT_FALSE(validatePacket(packet2));
+
+  // missing start byte
+  std::vector<uint8_t> packet3 = {0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x55};
+  TEST_ASSERT_FALSE(validatePacket(packet3));
+
+  // missing end byte
+  std::vector<uint8_t> packet4 = {0xAA, 0x01, 0x02, 0x03, 0x04, 0x05, 0x01};
+  TEST_ASSERT_FALSE(validatePacket(packet4));
+}
+
+void test_createForwardPacket_function(void)
+{
+  std::vector<uint8_t> packet = createPacket({0x01, 0x02, 0x03});
+  std::vector<uint8_t> forwardPacket = createForwardPacket(packet);
+  TEST_ASSERT_EQUAL(packet.size() - 1, forwardPacket.size());
+
+  TEST_ASSERT_EQUAL(forwardPacket[1], 0x02);
+  TEST_ASSERT_EQUAL(forwardPacket[2], 0x03);
+}
+
 int main(int argc, char **argv)
 {
   UNITY_BEGIN();
   RUN_TEST(test_calculateCRC_function);
   RUN_TEST(test_createPacket_function);
+  RUN_TEST(test_validatePacket_function);
+  RUN_TEST(test_createForwardPacket_function);
   return UNITY_END();
 }

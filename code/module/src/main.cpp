@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "utils.h"
+#include <vector>
 
 #define TXD1 19
 #define RXD1 21
@@ -8,8 +9,7 @@
 HardwareSerial mySerial(2);
 
 // Buffer for serial data
-const int BUFFER_SIZE = 64;
-uint8_t serialBuffer[BUFFER_SIZE];
+std::vector<uint8_t> serialBuffer;
 
 void setup()
 {
@@ -24,7 +24,9 @@ void loop()
   // Check if data is available to read
   if (mySerial.available())
   {
-    int bytesRead = mySerial.readBytes(serialBuffer, BUFFER_SIZE);
+    // Resize vector to available bytes
+    serialBuffer.resize(mySerial.available());
+    int bytesRead = mySerial.readBytes(serialBuffer.data(), serialBuffer.size());
     Serial.print("Received ");
     Serial.print(bytesRead);
     Serial.println(" bytes");
@@ -39,7 +41,27 @@ void loop()
     }
     Serial.println();
 
+    // validate the packet
+    if (!validatePacket(serialBuffer))
+    {
+      Serial.println("Invalid packet");
+      return;
+    }
+
+    // get first byte
+    uint8_t command = serialBuffer[1];
+    Serial.print("Command: ");
+    Serial.println(command);
+
+    // create packet to forward from remaining bytes
+    auto forwardPacket = createForwardPacket(serialBuffer);
+    if (forwardPacket.size() <= 3)
+    {
+      Serial.println("Forward packet is too small");
+      return;
+    }
+
     // forward the data
-    mySerial.write(serialBuffer, bytesRead);
+    mySerial.write(forwardPacket.data(), forwardPacket.size());
   }
 }
