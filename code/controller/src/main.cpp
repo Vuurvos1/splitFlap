@@ -112,6 +112,7 @@ void loop()
   static unsigned long lastSend = 0;
   if (millis() - lastSend > 2000)
   {
+    // data
     std::vector<uint8_t> data = {
         static_cast<uint8_t>(random(65)),
         static_cast<uint8_t>(random(65)),
@@ -119,7 +120,7 @@ void loop()
         static_cast<uint8_t>(random(65)),
         static_cast<uint8_t>(random(65))};
 
-    std::vector<uint8_t> packet = createPacket(data);
+    auto packet = createPacket(data);
 
     // print the packet
     Serial.print("Packet: ");
