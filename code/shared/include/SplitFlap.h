@@ -30,6 +30,13 @@ public:
     pinMode(dirPin, OUTPUT);
 
     digitalWrite(dirPin, HIGH); // Enables the motor to move in a particular direction
+
+    this->home();
+  }
+
+  void home()
+  {
+    // TODO: implement homing sequence
   }
 
   void update()
