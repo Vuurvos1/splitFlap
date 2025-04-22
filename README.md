@@ -9,6 +9,13 @@ modernized split flap
 10 `? ! & ' - = ; : , .` `@ # $ ^ * % / +`
 2 `blank □ full ■ `
 
+`0` and `O` can share the same flap
+`1` and `I` can share the same flap
+
+<!-- 26 + 8 + 2 = 36 -->
+
+14 `? ! + - # @ . €/$ , ' % : * =`
+
 ## Parts
 
 ### Motor
