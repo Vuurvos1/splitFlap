@@ -1,20 +1,23 @@
 # SplitFlap
 
-modernized split flap
+A modernized split flap display.
+
+<div style="text-align: center;">
+
+![SplitFlap](./assets/splitFlap2.png)
+
+</div>
 
 #### Characters
 
-26 `A B C D E F G H I J K L M N O P Q R S T U V W X Y Z`
-10 `1 2 3 4 5 6 7 8 9 0`
-10 `? ! & ' - = ; : , .` `@ # $ ^ * % / +`
-2 `blank □ full ■ `
+26 `A B C D E F G H I J K L M N O P Q R S T U V W X Y Z` \
+10 `1 2 3 4 5 6 7 8 9 0` \
+2 `blank □ full ■ ` \
+14 `? ! + - = * ' : , . @ # % €/$` <!-- & ^ ; --> \
 
-`0` and `O` can share the same flap
-`1` and `I` can share the same flap
+`0 O` and `1 I` can share the same flap
 
 <!-- 26 + 8 + 2 = 36 -->
-
-14 `? ! + - # @ . €/$ , ' % : * =`
 
 ## Parts
 
@@ -30,4 +33,4 @@ A4988 Stepper Motor Drivers
 
 ### Micro controller
 
-Esp32
+Esp32 / Arduino pro micro
