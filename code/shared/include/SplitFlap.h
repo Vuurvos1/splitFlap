@@ -22,9 +22,6 @@ public:
 
     stepper.setMaxSpeed(STEPS_PER_REVOLUTION * 2);
     stepper.setAcceleration(STEPS_PER_REVOLUTION * 2);
-
-    lastHallState = digitalRead(hallPin);
-    lastPosition = 0;
   }
 
   void init()
@@ -52,45 +49,28 @@ public:
 
   void update()
   {
-    stepper.run();
+    // normalized step
+    uint16_t normalizedStep = stepper.currentPosition() % STEPS_PER_REVOLUTION;
 
-    // Check for home position passing
-    bool currentHallState = digitalRead(hallPin);
-    if (currentHallState != lastHallState)
+    // at first flap, 1 deg
+    if (normalizedStep == STEPS_PER_REVOLUTION / 360 && digitalRead(hallPin) == HIGH)
     {
-      if (currentHallState == LOW) // Hall sensor just triggered
+      Serial.println("Missed steps");
+
+      stepper.setSpeed(1000); // Steps per second
+      while (digitalRead(hallPin) == HIGH)
       {
-        int currentPosition = stepper.currentPosition();
-        int stepsSinceLastHome = currentPosition - lastPosition;
-
-        // Calculate how far we are from the nearest flap boundary
-        int positionError = currentPosition % FLAP_STEPS;
-        // If we're more than halfway through a flap, consider it as being close to the next boundary
-        if (positionError > FLAP_STEPS / 2)
-        {
-          positionError = FLAP_STEPS - positionError;
-        }
-
-        // Allow for more lenient tolerance (1/4 of a flap)
-        const int MAX_ALLOWED_ERROR = FLAP_STEPS / 4;
-
-        if (positionError > MAX_ALLOWED_ERROR)
-        {
-          Serial.printf("Warning: Position error detected! Off by %d steps (max allowed: %d)\n",
-                        positionError, MAX_ALLOWED_ERROR);
-          // Try to correct the position to the nearest flap boundary
-          int correctedPosition = (currentPosition / FLAP_STEPS) * FLAP_STEPS;
-          if (positionError > FLAP_STEPS / 2)
-          {
-            correctedPosition += FLAP_STEPS;
-          }
-          stepper.setCurrentPosition(correctedPosition);
-        }
-
-        lastPosition = currentPosition;
+        stepper.runSpeed();
       }
-      lastHallState = currentHallState;
+
+      // set position to the nearest full rotation (rounded down)
+      long offset = stepper.currentPosition() % STEPS_PER_REVOLUTION;
+      stepper.setCurrentPosition(stepper.currentPosition() - offset);
+
+      // TODO: fix, this prevents the module from moving to its target position
     }
+
+    stepper.run();
   }
 
   void setCharacter(char c)
@@ -107,7 +87,7 @@ public:
       return;
     }
 
-    int currentIndex = getFlapIndex();
+    int currentIndex = getCurrentFlapIndex();
     int currentPosition = stepper.currentPosition();
 
     int steps = index - currentIndex;
@@ -124,7 +104,7 @@ public:
   void moveFlaps(int steps)
   {
     // TODO: update to take the closest target position, instead of just adding steps
-    Serial.printf("Moving %d flaps to index %d\n", steps, (getFlapIndex() + steps) % FLAP_COUNT);
+    Serial.printf("Moving %d flaps to index %d\n", steps, (getCurrentFlapIndex() + steps) % FLAP_COUNT);
     stepper.moveTo(stepper.targetPosition() + steps * FLAP_STEPS);
   }
 
@@ -134,15 +114,12 @@ private:
   int hallPin;
   AccelStepper stepper;
 
-  bool lastHallState;
-  int lastPosition;
-
   // TOOD: update character list
   const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# █";
-  const int FLAP_COUNT = characters.length();
-  const int FLAP_STEPS = STEPS_PER_REVOLUTION / characters.length();
+  const uint8_t FLAP_COUNT = characters.length();
+  const uint16_t FLAP_STEPS = STEPS_PER_REVOLUTION / FLAP_COUNT;
 
-  int getCharacterIndex(char c)
+  uint8_t getCharacterIndex(char c)
   {
     int index = characters.indexOf(toUpperCase(c)); // toupper(c) ??
     if (index == -1)
@@ -154,10 +131,13 @@ private:
   }
 
   // TODO: Get current flap index
-  int getFlapIndex()
+  uint8_t getCurrentFlapIndex()
   {
     return stepper.currentPosition() / FLAP_STEPS % FLAP_COUNT;
   }
 
-  // TODO: get target flap index
+  uint8_t getTargetFlapIndex()
+  {
+    return stepper.targetPosition() / FLAP_STEPS % FLAP_COUNT;
+  }
 };

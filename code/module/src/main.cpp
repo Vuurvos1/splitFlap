@@ -43,7 +43,7 @@ void loop()
   static unsigned long lastMove = 0;
   if (millis() - lastMove > 5000)
   {
-    splitFlap.moveFlaps(49); // TODO: make sure this also works with > 50
+    splitFlap.moveFlaps(51); // TODO: make sure this also works with > 50
     lastMove = millis();
   }
 
