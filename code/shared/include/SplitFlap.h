@@ -57,6 +57,9 @@ public:
     {
       Serial.println("Missed steps");
 
+      // get the target flap index before resetting the position
+      const uint8_t targetFlapIndex = getTargetFlapIndex();
+
       stepper.setSpeed(1000); // Steps per second
       while (digitalRead(hallPin) == HIGH)
       {
@@ -67,30 +70,32 @@ public:
       long offset = stepper.currentPosition() % STEPS_PER_REVOLUTION;
       stepper.setCurrentPosition(stepper.currentPosition() - offset);
 
-      // TODO: fix, this prevents the module from moving to its target position
+      setFlap(targetFlapIndex);
     }
 
     stepper.run();
   }
 
+  [[deprecated("Use setFlap() with numeric index instead")]]
   void setCharacter(char c)
   {
     int targetIndex = getCharacterIndex(c);
     setFlap(targetIndex);
   }
 
-  void setFlap(int index)
+  /** move to a specific flap index */
+  void setFlap(uint8_t index)
   {
-    if (index < 0 || index >= FLAP_COUNT)
+    if (index >= FLAP_COUNT)
     {
       Serial.printf("Invalid index: %d\n", index);
       return;
     }
 
-    int currentIndex = getCurrentFlapIndex();
-    int currentPosition = stepper.currentPosition();
+    const uint8_t currentIndex = getCurrentFlapIndex();
+    const long currentPosition = stepper.currentPosition();
 
-    int steps = index - currentIndex;
+    int16_t steps = index - currentIndex;
 
     if (steps < 0)
     {
@@ -101,10 +106,8 @@ public:
   }
 
   /** move x amount of flaps */
-  void moveFlaps(int steps)
+  void moveFlaps(long steps)
   {
-    // TODO: update to take the closest target position, instead of just adding steps
-    Serial.printf("Moving %d flaps to index %d\n", steps, (getCurrentFlapIndex() + steps) % FLAP_COUNT);
     stepper.moveTo(stepper.targetPosition() + steps * FLAP_STEPS);
   }
 
@@ -114,11 +117,13 @@ private:
   int hallPin;
   AccelStepper stepper;
 
-  // TOOD: update character list
+  [[deprecated("Update character list")]]
   const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# █";
-  const uint8_t FLAP_COUNT = characters.length();
+
+  const uint8_t FLAP_COUNT = 50;
   const uint16_t FLAP_STEPS = STEPS_PER_REVOLUTION / FLAP_COUNT;
 
+  [[deprecated("Use setFlap() with numeric index instead")]]
   uint8_t getCharacterIndex(char c)
   {
     int index = characters.indexOf(toUpperCase(c)); // toupper(c) ??
@@ -130,12 +135,13 @@ private:
     return index;
   }
 
-  // TODO: Get current flap index
+  /** get the current flap index */
   uint8_t getCurrentFlapIndex()
   {
     return stepper.currentPosition() / FLAP_STEPS % FLAP_COUNT;
   }
 
+  /** get the target flap index */
   uint8_t getTargetFlapIndex()
   {
     return stepper.targetPosition() / FLAP_STEPS % FLAP_COUNT;

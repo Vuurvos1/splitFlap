@@ -35,6 +35,8 @@ void setup()
   Serial.println("Module started");
 }
 
+uint8_t flapIndex = 40;
+
 void loop()
 {
   splitFlap.update();
@@ -43,7 +45,12 @@ void loop()
   static unsigned long lastMove = 0;
   if (millis() - lastMove > 5000)
   {
-    splitFlap.moveFlaps(51); // TODO: make sure this also works with > 50
+    flapIndex = (flapIndex + 1) % 50;
+
+    Serial.printf("Setting flap to index: %d\n", flapIndex);
+    splitFlap.setFlap(flapIndex);
+    // splitFlap.moveFlaps(51); // TODO: make sure this also works with > 50
+
     lastMove = millis();
   }
 
