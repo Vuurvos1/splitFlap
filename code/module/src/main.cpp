@@ -7,15 +7,14 @@
 #define RXD1 21
 
 // defines pins
-#define STEP_PIN 13
-#define DIR_PIN 12
+#define STEP_PIN 22
+#define DIR_PIN 23
+#define HALL_PIN 15
 
-SplitFlap splitFlap(STEP_PIN, DIR_PIN);
+SplitFlap splitFlap(STEP_PIN, DIR_PIN, HALL_PIN);
 
 // Use Serial1 for UART communication
 HardwareSerial mySerial(2);
-
-SplitFlap splitFlap(13, 12);
 
 bool readingPacket = false;
 
@@ -31,13 +30,29 @@ void setup()
   mySerial.begin(9600, SERIAL_8N1, RXD1, TXD1); // UART setup
 
   splitFlap.init();
+  splitFlap.home();
 
   Serial.println("Module started");
 }
 
+uint8_t flapIndex = 40;
+
 void loop()
 {
   splitFlap.update();
+
+  // move flap every 200ms
+  static unsigned long lastMove = 0;
+  if (millis() - lastMove > 5000)
+  {
+    flapIndex = (flapIndex + 1) % 50;
+
+    Serial.printf("Setting flap to index: %d\n", flapIndex);
+    splitFlap.setFlap(flapIndex);
+    // splitFlap.moveFlaps(51); // TODO: make sure this also works with > 50
+
+    lastMove = millis();
+  }
 
   // Check if data is available to read
   if (mySerial.available())

@@ -13,59 +13,89 @@
 class SplitFlap
 {
 public:
-  SplitFlap(int stepPin, int dirPin)
+  SplitFlap(int stepPin, int dirPin, int hallPin)
   {
     this->stepPin = stepPin;
     this->dirPin = dirPin;
+    this->hallPin = hallPin;
     stepper = AccelStepper(AccelStepper::DRIVER, stepPin, dirPin);
 
-    // Set the maximum speed and acceleration
-    stepper.setMaxSpeed(STEPS_PER_REVOLUTION * 8); // Set the maximum speed in steps per second
-    stepper.setAcceleration(STEPS_PER_REVOLUTION); // Set the acceleration in steps per second squared
+    stepper.setMaxSpeed(STEPS_PER_REVOLUTION * 2);
+    stepper.setAcceleration(STEPS_PER_REVOLUTION * 2);
   }
 
   void init()
   {
     pinMode(stepPin, OUTPUT);
     pinMode(dirPin, OUTPUT);
+    pinMode(hallPin, INPUT_PULLUP);
 
     digitalWrite(dirPin, HIGH); // Enables the motor to move in a particular direction
-
-    this->home();
   }
 
   void home()
   {
-    // TODO: implement homing sequence
+    // TODO: make this non blocking by adding module states
+    Serial.println("Homing");
+    stepper.setSpeed(1000); // Steps per second
+    while (digitalRead(hallPin) == HIGH)
+    {
+      stepper.runSpeed();
+    }
+    stepper.setCurrentPosition(0);
+
+    // TODO: add max steps
   }
 
   void update()
   {
-    // if (current pos % flapSteps == 0) {
-    //   stepper.stop(); // reset to prevent overflow
-    // }
+    // normalized step
+    uint16_t normalizedStep = stepper.currentPosition() % STEPS_PER_REVOLUTION;
+
+    // at first flap, 1 deg
+    if (normalizedStep == STEPS_PER_REVOLUTION / 360 && digitalRead(hallPin) == HIGH)
+    {
+      Serial.println("Missed steps");
+
+      // get the target flap index before resetting the position
+      const uint8_t targetFlapIndex = getTargetFlapIndex();
+
+      stepper.setSpeed(1000); // Steps per second
+      while (digitalRead(hallPin) == HIGH)
+      {
+        stepper.runSpeed();
+      }
+
+      // set position to the nearest full rotation (rounded down)
+      long offset = stepper.currentPosition() % STEPS_PER_REVOLUTION;
+      stepper.setCurrentPosition(stepper.currentPosition() - offset);
+
+      setFlap(targetFlapIndex);
+    }
 
     stepper.run();
   }
 
+  [[deprecated("Use setFlap() with numeric index instead")]]
   void setCharacter(char c)
   {
     int targetIndex = getCharacterIndex(c);
     setFlap(targetIndex);
   }
 
-  void setFlap(int index)
+  /** move to a specific flap index */
+  void setFlap(uint8_t index)
   {
-    if (index < 0 || index >= FLAP_COUNT)
+    if (index >= FLAP_COUNT)
     {
       Serial.printf("Invalid index: %d\n", index);
       return;
     }
 
-    int currentIndex = getFlapIndex();
-    int currentPosition = stepper.currentPosition();
+    const uint8_t currentIndex = getCurrentFlapIndex();
+    const long currentPosition = stepper.currentPosition();
 
-    int steps = index - currentIndex;
+    int16_t steps = index - currentIndex;
 
     if (steps < 0)
     {
@@ -75,50 +105,26 @@ public:
     stepper.moveTo(currentPosition + steps * FLAP_STEPS);
   }
 
-  void moveFlaps(int steps)
+  /** move x amount of flaps */
+  void moveFlaps(long steps)
   {
-    stepper.moveTo(stepper.currentPosition() + steps * FLAP_STEPS);
+    stepper.moveTo(stepper.targetPosition() + steps * FLAP_STEPS);
   }
 
 private:
   int stepPin;
   int dirPin;
+  int hallPin;
   AccelStepper stepper;
 
-  // 26 ABCDEFGHIJKLMNOPQRSTUVWXYZ
-  // 10 0123456789
-  // 20 !@#$%^&*()_+{}|:<>?/.,;[]\\=-`~
-  // 1 █ (full block)
-  // 1 space
+  [[deprecated("Update character list")]]
+  const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# █";
 
-  // "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █
-  // ",.?!=/-+:$%()"
+  const uint8_t FLAP_COUNT = 50;
+  const uint16_t FLAP_STEPS = STEPS_PER_REVOLUTION / FLAP_COUNT;
 
-  // ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+{}|:<>?/.,;[]\\=-`~"
-  // █
-
-  // const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
-  // "+-*!.#%@?,&': █"
-  // "?!@&()+-%$█*= "
-  // " █?!@%'+-=.,#:"
-
-  // TODO: maybe reuse 0 and o and 1 and i
-  // const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@#$%^&*()+:/.,=-`\" █";
-  // | is full block
-  // ?!@-=+&%$#.,:'
-
-  // "+-*!.#%@?,&': █"
-  // "?!@&()+-%$█*= "
-  // " █?!@%'+-=.,#:"
-
-  // +-:,.'%$@?!# █
-
-  const String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-:,.'%$@?!# |";
-  // | is full block??
-  const int FLAP_COUNT = characters.length();
-  const int FLAP_STEPS = STEPS_PER_REVOLUTION / characters.length();
-
-  int getCharacterIndex(char c)
+  [[deprecated("Use setFlap() with numeric index instead")]]
+  uint8_t getCharacterIndex(char c)
   {
     int index = characters.indexOf(toUpperCase(c)); // toupper(c) ??
     if (index == -1)
@@ -129,8 +135,15 @@ private:
     return index;
   }
 
-  int getFlapIndex()
+  /** get the current flap index */
+  uint8_t getCurrentFlapIndex()
   {
     return stepper.currentPosition() / FLAP_STEPS % FLAP_COUNT;
+  }
+
+  /** get the target flap index */
+  uint8_t getTargetFlapIndex()
+  {
+    return stepper.targetPosition() / FLAP_STEPS % FLAP_COUNT;
   }
 };
