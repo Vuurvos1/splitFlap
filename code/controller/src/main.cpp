@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <LittleFS.h>
 
 #include <SplitFlap.h>
 #include <utils.h>
@@ -20,8 +21,57 @@ WebServer server(80);
 // defines pins
 #define STEP_PIN 13
 #define DIR_PIN 12
+#define HALL_PIN 15
 
-SplitFlap splitFlap(STEP_PIN, DIR_PIN);
+SplitFlap splitFlap(STEP_PIN, DIR_PIN, HALL_PIN);
+
+String getContentType(String filename)
+{
+  if (filename.endsWith(".html"))
+    return "text/html";
+  else if (filename.endsWith(".css"))
+    return "text/css";
+  else if (filename.endsWith(".js"))
+    return "application/javascript";
+  else if (filename.endsWith(".json"))
+    return "application/json";
+  else if (filename.endsWith(".png"))
+    return "image/png";
+  else if (filename.endsWith(".jpg"))
+    return "image/jpeg";
+  else if (filename.endsWith(".ico"))
+    return "image/x-icon";
+  else if (filename.endsWith(".svg"))
+    return "image/svg+xml";
+  else if (filename.endsWith(".woff2"))
+    return "font/woff2";
+  else if (filename.endsWith(".woff"))
+    return "font/woff";
+  else if (filename.endsWith(".ttf"))
+    return "font/ttf";
+  else if (filename.endsWith(".mp3"))
+    return "audio/mpeg";
+  else if (filename.endsWith(".mp4"))
+    return "video/mp4";
+  return "application/octet-stream";
+}
+
+bool handleFileRead(String path)
+{
+  if (path.endsWith("/"))
+    path += "index.html";
+
+  String contentType = getContentType(path);
+
+  if (LittleFS.exists(path))
+  {
+    File file = LittleFS.open(path, "r");
+    server.streamFile(file, contentType);
+    file.close();
+    return true;
+  }
+  return false;
+}
 
 void handleRoot()
 {
@@ -30,7 +80,15 @@ void handleRoot()
 
 void handleNotFound()
 {
-  server.send(404, "text/plain", "Not found");
+  if (!handleFileRead(server.uri()))
+  {
+    {
+      // Fall back to index.html for client-side routing
+      handleFileRead("/index.html");
+    }
+
+    // server.send(404, "text/plain", "Not found");
+  }
 }
 
 void handleCharacter()
@@ -69,6 +127,11 @@ void setup()
   while (!Serial)
     ;
 
+  if (!LittleFS.begin(true))
+  {
+    Serial.println("An error occurred while mounting LittleFS");
+  }
+
   splitFlap.init();
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -93,9 +156,9 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
-  server.on("/", handleRoot);
-  server.on("/character", handleCharacter);
-  server.on("/flaps", handleFlaps);
+  // server.on("/", handleRoot);
+  // server.on("/character", handleCharacter);
+  // server.on("/flaps", handleFlaps);
   server.onNotFound(handleNotFound);
 
   server.begin();
