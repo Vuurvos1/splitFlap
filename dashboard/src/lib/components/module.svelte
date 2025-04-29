@@ -1,17 +1,42 @@
 <script lang="ts">
 	interface Props {
 		character: string;
+		selected: boolean;
+		onSelect?: () => void;
 	}
 
-	let { character = $bindable('') }: Props = $props();
+	let {
+		character = $bindable(''),
+		selected = $bindable(false),
+		onSelect = $bindable(() => {})
+	}: Props = $props();
+
+	let inputRef = $state<HTMLInputElement | null>(null);
+
+	$effect(() => {
+		if (inputRef && selected) {
+			inputRef.focus();
+		}
+	});
 </script>
 
-<div class="module">
+<div class="module" class:selected>
 	<div class="module-content">
-		<div class="flaps"></div>
+		<div
+			class="flaps"
+			style:background-color={character === '|' ? 'white' : 'var(--module-color)'}
+		></div>
 		<div class="flap-gap"></div>
 
-		<input class="flap-input" maxlength="1" type="text" bind:value={character} />
+		<input
+			bind:this={inputRef}
+			class="flap-input"
+			style:color={character === '|' ? 'transparent' : 'white'}
+			maxlength="1"
+			type="text"
+			bind:value={character}
+			onclick={onSelect}
+		/>
 
 		<div class="top-shadow"></div>
 		<div class="bottom-shadow"></div>
@@ -36,6 +61,11 @@
 		/* border-radius: 0.5rem;
 		padding: 0.5rem;
 		box-shadow: 0 0 0.5rem 0.5rem var(--shadow-color); */
+	}
+
+	.module.selected {
+		background-color: #fafafa;
+		/* color: var(--module-color); */
 	}
 
 	.module-content {
