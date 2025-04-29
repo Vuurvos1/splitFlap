@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <LittleFS.h>
 
 #include <SplitFlap.h>
 #include <utils.h>
@@ -20,8 +21,57 @@ WebServer server(80);
 // defines pins
 #define STEP_PIN 13
 #define DIR_PIN 12
+#define HALL_PIN 15
 
-SplitFlap splitFlap(STEP_PIN, DIR_PIN);
+SplitFlap splitFlap(STEP_PIN, DIR_PIN, HALL_PIN);
+
+String getContentType(String filename)
+{
+  if (filename.endsWith(".html"))
+    return "text/html";
+  else if (filename.endsWith(".css"))
+    return "text/css";
+  else if (filename.endsWith(".js"))
+    return "application/javascript";
+  else if (filename.endsWith(".json"))
+    return "application/json";
+  else if (filename.endsWith(".png"))
+    return "image/png";
+  else if (filename.endsWith(".jpg"))
+    return "image/jpeg";
+  else if (filename.endsWith(".ico"))
+    return "image/x-icon";
+  else if (filename.endsWith(".svg"))
+    return "image/svg+xml";
+  else if (filename.endsWith(".woff2"))
+    return "font/woff2";
+  else if (filename.endsWith(".woff"))
+    return "font/woff";
+  else if (filename.endsWith(".ttf"))
+    return "font/ttf";
+  else if (filename.endsWith(".mp3"))
+    return "audio/mpeg";
+  else if (filename.endsWith(".mp4"))
+    return "video/mp4";
+  return "application/octet-stream";
+}
+
+bool handleFileRead(String path)
+{
+  if (path.endsWith("/"))
+    path += "index.html";
+
+  String contentType = getContentType(path);
+
+  if (LittleFS.exists(path))
+  {
+    File file = LittleFS.open(path, "r");
+    server.streamFile(file, contentType);
+    file.close();
+    return true;
+  }
+  return false;
+}
 
 void handleRoot()
 {
@@ -30,7 +80,15 @@ void handleRoot()
 
 void handleNotFound()
 {
-  server.send(404, "text/plain", "Not found");
+  if (!handleFileRead(server.uri()))
+  {
+    {
+      // Fall back to index.html for client-side routing
+      handleFileRead("/index.html");
+    }
+
+    // server.send(404, "text/plain", "Not found");
+  }
 }
 
 void handleCharacter()
@@ -59,6 +117,71 @@ void handleFlaps()
   server.send(400, "text/plain", "Bad request");
 }
 
+void handleSplitflap()
+{
+  if (server.method() != HTTP_POST)
+  {
+    server.send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+
+  String body = server.arg("plain");
+
+  // Simple validation - must start with [ and end with ]
+  if (body[0] != '[' || body[body.length() - 1] != ']')
+  {
+    server.send(400, "text/plain", "Invalid array format");
+    return;
+  }
+
+  // Remove the brackets
+  body = body.substring(1, body.length() - 1);
+
+  std::vector<uint8_t> data;
+
+  // Split string into numbers and add to data vector
+  int start = 0;
+  while (true)
+  {
+    int end = body.indexOf(',', start);
+    bool isLast = (end == -1);
+    if (isLast)
+    {
+      end = body.length();
+    }
+
+    String numStr = body.substring(start, end);
+    numStr.trim();
+    if (numStr.length() > 0)
+    {
+      data.push_back(static_cast<uint8_t>(numStr.toInt()));
+    }
+
+    if (isLast)
+      break;
+    start = end + 1;
+  }
+
+  // print the data
+  Serial.print("Data: ");
+  for (uint8_t byte : data)
+  {
+    Serial.print(byte);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // set splitflap to the first data value
+  splitFlap.setFlap(data[0]);
+  data.erase(data.begin());
+
+  // pass the rest of the data to the splitflap
+  auto packet = createPacket(data);
+  mySerial.write(packet.data(), packet.size());
+
+  server.send(200, "text/plain", "OK");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -68,6 +191,11 @@ void setup()
 
   while (!Serial)
     ;
+
+  if (!LittleFS.begin(true))
+  {
+    Serial.println("An error occurred while mounting LittleFS");
+  }
 
   splitFlap.init();
 
@@ -93,8 +221,9 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
-  server.on("/", handleRoot);
-  server.on("/character", handleCharacter);
+  // server.on("/", handleRoot);
+  // server.on("/character", handleCharacter);
+  server.on("/api/splitflap", handleSplitflap);
   server.on("/flaps", handleFlaps);
   server.onNotFound(handleNotFound);
 
@@ -107,32 +236,4 @@ void loop()
   server.handleClient();
 
   splitFlap.update();
-
-  // send a message over serial every 2 seconds
-  static unsigned long lastSend = 0;
-  if (millis() - lastSend > 2000)
-  {
-    // data
-    std::vector<uint8_t> data = {
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65))};
-
-    auto packet = createPacket(data);
-
-    // print the packet
-    Serial.print("Packet: ");
-    for (uint8_t byte : packet)
-    {
-      Serial.print(byte);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    mySerial.write(packet.data(), packet.size());
-
-    lastSend = millis();
-  }
 }
