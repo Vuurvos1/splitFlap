@@ -117,6 +117,71 @@ void handleFlaps()
   server.send(400, "text/plain", "Bad request");
 }
 
+void handleSplitflap()
+{
+  if (server.method() != HTTP_POST)
+  {
+    server.send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+
+  String body = server.arg("plain");
+
+  // Simple validation - must start with [ and end with ]
+  if (body[0] != '[' || body[body.length() - 1] != ']')
+  {
+    server.send(400, "text/plain", "Invalid array format");
+    return;
+  }
+
+  // Remove the brackets
+  body = body.substring(1, body.length() - 1);
+
+  std::vector<uint8_t> data;
+
+  // Split string into numbers and add to data vector
+  int start = 0;
+  while (true)
+  {
+    int end = body.indexOf(',', start);
+    bool isLast = (end == -1);
+    if (isLast)
+    {
+      end = body.length();
+    }
+
+    String numStr = body.substring(start, end);
+    numStr.trim();
+    if (numStr.length() > 0)
+    {
+      data.push_back(static_cast<uint8_t>(numStr.toInt()));
+    }
+
+    if (isLast)
+      break;
+    start = end + 1;
+  }
+
+  // print the data
+  Serial.print("Data: ");
+  for (uint8_t byte : data)
+  {
+    Serial.print(byte);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  // set splitflap to the first data value
+  splitFlap.setFlap(data[0]);
+  data.erase(data.begin());
+
+  // pass the rest of the data to the splitflap
+  auto packet = createPacket(data);
+  mySerial.write(packet.data(), packet.size());
+
+  server.send(200, "text/plain", "OK");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -158,7 +223,8 @@ void setup()
 
   // server.on("/", handleRoot);
   // server.on("/character", handleCharacter);
-  // server.on("/flaps", handleFlaps);
+  server.on("/api/splitflap", handleSplitflap);
+  server.on("/flaps", handleFlaps);
   server.onNotFound(handleNotFound);
 
   server.begin();
@@ -170,32 +236,4 @@ void loop()
   server.handleClient();
 
   splitFlap.update();
-
-  // send a message over serial every 2 seconds
-  static unsigned long lastSend = 0;
-  if (millis() - lastSend > 2000)
-  {
-    // data
-    std::vector<uint8_t> data = {
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65)),
-        static_cast<uint8_t>(random(65))};
-
-    auto packet = createPacket(data);
-
-    // print the packet
-    Serial.print("Packet: ");
-    for (uint8_t byte : packet)
-    {
-      Serial.print(byte);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    mySerial.write(packet.data(), packet.size());
-
-    lastSend = millis();
-  }
 }

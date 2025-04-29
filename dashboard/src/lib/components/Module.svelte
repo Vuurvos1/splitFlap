@@ -20,7 +20,7 @@
 	});
 </script>
 
-<div class="module" class:selected>
+<div class="module" class:selected class:bg-stone-600!={selected}>
 	<div class="module-content">
 		<div
 			class="flaps"
@@ -63,10 +63,8 @@
 		box-shadow: 0 0 0.5rem 0.5rem var(--shadow-color); */
 	}
 
-	.module.selected {
-		background-color: #fafafa;
-		/* color: var(--module-color); */
-	}
+	/* .module.selected {
+	} */
 
 	.module-content {
 		background-color: var(--shadow-color);
