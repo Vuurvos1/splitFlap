@@ -10,3 +10,5 @@ temp/
 
 ## removing kicad backupts
 *-backups/
+
+export/
