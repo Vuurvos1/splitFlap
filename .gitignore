@@ -3,3 +3,12 @@ temp/
 
 # temporary SW files
 ~$*
+
+## removing freecad autosaves
+*.FCStd.*
+*.FCBak
+
+## removing kicad backupts
+*-backups/
+
+export/
