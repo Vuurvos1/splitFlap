@@ -1,36 +1,55 @@
 # SplitFlap
 
-A modernized split flap display.
-
 <div style="text-align: center;">
 
 ![SplitFlap](./assets/splitFlap2.png)
 
 </div>
 
-#### Characters
+A modernized split flap display.
 
-26 `A B C D E F G H I J K L M N O P Q R S T U V W X Y Z` \
-10 `1 2 3 4 5 6 7 8 9 0` \
-2 `blank □ full ■ ` \
-14 `? ! + - = * ' : , . @ # % €/$` <!-- & ^ ; --> \
+## Flap Characters
 
-`0 O` and `1 I` can share the same flap
+Suggested 50 characters:
 
-<!-- 26 + 8 + 2 = 36 -->
+```
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z (26)
+1 2 3 4 5 6 7 8 9 0 (10)
+blank □ full ■ (2)
+? ! + - = * ' : , . @ # % € (14)
+```
 
-## Parts
+ <!-- $ & ^ ; -->
 
-### Motor
+> [!NOTE]  
+> `0 O` and `1 I` can share the same flap
 
-The stepper motor used to turn the barrel is a Dual Shaft Nema 17 with a 20mm front shaft, 10mm back shaft and a body of 42x42x34mm although simelar motor sizes could work as long as they fit inside the barrel and body of a flap module.
+## Materials
 
-A dual shaft motor is used so the mounting holes of the motor are freed and can be more easily used to mount the motor to the side of a module. A motor with a reversed shaft could also work.
-
-### Driver
-
-A4988 Stepper Motor Drivers
+- 1x Nema 17 Stepper Motor
+- 1x A4988 Stepper Motor Driver (or similar)
+- 1x Hall Effect Switch (a TLE4905L or similar)
+- 8x M3 Countersunk Screws (for the body)
+- 8x M3 Screws (for the barrel)
+- 4x M3x18 Screws (to mount the motor)
+- 1x M3 Countersunk Screw (for the flap stopper)
 
 ### Micro controller
 
-Esp32 / Arduino pro micro
+- Esp32
+- Arduino pro micro
+
+I am using an Esp32 for the main module, and you can use any other micro controller like a pro micro for the other modules.
+
+### Motor
+
+I originally got dual shafted Nema 17 motors for this project so I could mount the flap barrel on the back side of the motor.
+
+> [!NOTE]  
+> You could use any other Nema 17 motor with a reversed D shaft.
+> Reversing the shaft can easily be done if you open up the motor and flip the shaft so it sticks out of the "back" of the motor.
+> You might need to tweak the motor spacers and use different length screws to mount different motors.
+
+### Driver
+
+- A4988 Stepper Motor Driver
