@@ -12,3 +12,5 @@ temp/
 *-backups/
 
 export/
+
+.DS_Store

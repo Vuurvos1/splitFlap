@@ -1,12 +1,25 @@
-# SplitFlap
+<h1 align="center">SplitFlap</h1>
 
-<div style="text-align: center;">
+<p align="center">
+  <img src="./docs/assets/splitFlap2.png" alt="Split flap module" width="480">
+</p>
 
-![SplitFlap](./assets/splitFlap2.png)
+<p align="center">A modernized split flap display.</p>
 
-</div>
+## Features
 
-A modernized split flap display.
+- 50 Flaps per module
+- 54mm x 80mm Character size
+- Compact 80mm x 160mm x 110mm module size
+- 3D printable
+- Daisy chained
+- Web controllabe
+
+## Dashboard
+
+The display can be controlled through a web dashboard hosted on the controller module.
+
+![Dashboard](./docs/assets/splitflap-dashboard.png)
 
 ## Flap Characters
 
