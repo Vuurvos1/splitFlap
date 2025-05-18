@@ -30,7 +30,7 @@ public:
     pinMode(dirPin, OUTPUT);
     pinMode(hallPin, INPUT_PULLUP);
 
-    digitalWrite(dirPin, HIGH); // Enables the motor to move in a particular direction
+    digitalWrite(dirPin, LOW); // Enables the motor to move in a particular direction
   }
 
   void home()

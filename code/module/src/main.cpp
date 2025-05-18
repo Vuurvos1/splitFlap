@@ -7,8 +7,8 @@
 #define RXD1 21
 
 // defines pins
-#define STEP_PIN 22
-#define DIR_PIN 23
+#define STEP_PIN 16
+#define DIR_PIN 17
 #define HALL_PIN 15
 
 SplitFlap splitFlap(STEP_PIN, DIR_PIN, HALL_PIN);

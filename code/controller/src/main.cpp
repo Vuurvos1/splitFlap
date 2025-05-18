@@ -19,8 +19,8 @@ HardwareSerial mySerial(1);
 WebServer server(80);
 
 // defines pins
-#define STEP_PIN 13
-#define DIR_PIN 12
+#define STEP_PIN 16
+#define DIR_PIN 17
 #define HALL_PIN 15
 
 SplitFlap splitFlap(STEP_PIN, DIR_PIN, HALL_PIN);
@@ -71,11 +71,6 @@ bool handleFileRead(String path)
     return true;
   }
   return false;
-}
-
-void handleRoot()
-{
-  server.send(200, "text/html", "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\"></head><body><h1>Hey there!</h1></body></html>");
 }
 
 void handleNotFound()
@@ -198,6 +193,7 @@ void setup()
   }
 
   splitFlap.init();
+  splitFlap.home();
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Establishing connection to WiFi");
@@ -221,7 +217,6 @@ void setup()
   }
   Serial.println("mDNS responder started");
 
-  // server.on("/", handleRoot);
   // server.on("/character", handleCharacter);
   server.on("/api/splitflap", handleSplitflap);
   server.on("/flaps", handleFlaps);
@@ -233,7 +228,6 @@ void setup()
 
 void loop()
 {
-  server.handleClient();
-
   splitFlap.update();
+  server.handleClient();
 }
