@@ -14,3 +14,7 @@ temp/
 export/
 
 .DS_Store
+
+# kicad
+*-backups/
+*.lck
