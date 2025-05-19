@@ -43,6 +43,7 @@ public:
       stepper.runSpeed();
     }
     stepper.setCurrentPosition(0);
+    Serial.println("Homing complete");
 
     // TODO: add max steps
   }
